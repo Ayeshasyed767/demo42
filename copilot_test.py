@@ -1,30 +1,48 @@
-import os
 import platform
 import subprocess
 
-def print_system_uptime():
-    system = platform.system()
-    uptime = ""
+def get_unix_uptime():
+    """
+    Returns the system uptime for Unix-like systems in a human-readable format.
+    """
     try:
-        if system == "Linux" or system == "Darwin":
-            # For Unix-like systems
-            with open('/proc/uptime', 'r') as f:
-                uptime_seconds = float(f.readline().split()[0])
-            uptime = f"System uptime: {uptime_seconds // 3600:.0f} hours {(uptime_seconds % 3600) // 60:.0f} minutes"
-        elif system == "Windows":
-            # For Windows
-            output = subprocess.check_output("net stats srv", shell=True, text=True)
-            for line in output.splitlines():
-                if "Statistics since" in line:
-                    uptime = f"System uptime since: {line.split('since', 1)[1].strip()}"
-                    break
-            else:
-                uptime = "Could not determine uptime."
-        else:
-            uptime = "Unsupported OS for uptime check."
+        with open('/proc/uptime', 'r') as f:
+            uptime_seconds = float(f.readline().split()[0])
+        hours = int(uptime_seconds // 3600)
+        minutes = int((uptime_seconds % 3600) // 60)
+        return f"System uptime: {hours} hours {minutes} minutes"
     except Exception as e:
-        uptime = f"Error fetching uptime: {e}"
-    print(uptime)
+        return f"Error fetching Unix uptime: {e}"
+
+def get_windows_uptime():
+    """
+    Returns the system uptime for Windows systems in a human-readable format.
+    """
+    try:
+        result = subprocess.run(
+            ["net", "stats", "srv"],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        for line in result.stdout.splitlines():
+            if "Statistics since" in line:
+                return f"System uptime since: {line.split('since', 1)[1].strip()}"
+        return "Could not determine uptime."
+    except Exception as e:
+        return f"Error fetching Windows uptime: {e}"
+
+def print_system_uptime():
+    """
+    Detects the OS and prints the system uptime using the appropriate method.
+    """
+    system = platform.system()
+    if system in ("Linux", "Darwin"):
+        print(get_unix_uptime())
+    elif system == "Windows":
+        print(get_windows_uptime())
+    else:
+        print("Unsupported OS for uptime check.")
 
 if __name__ == "__main__":
     print_system_uptime()
